@@ -1,0 +1,7 @@
+/hull
+/dist/
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+image.txt
