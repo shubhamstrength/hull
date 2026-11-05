@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hull dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 12h24l-3 12H7z' fill='%232f6fde'/><rect x='10' y='5' width='12' height='7' rx='1' fill='%2394b4f0'/></svg>">
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #17191c; --muted: #646b75; --line: #e3e6ea;
+  --accent: #2f6fde; --accent-text: #ffffff; --ok: #1f8a4c; --ok-bg: #e5f5ec; --warn: #9a6400; --warn-bg: #fdf3dc;
+  --bad: #c0362c; --bad-bg: #fbe9e7; --idle: #646b75; --idle-bg: #eef0f3; --code-bg: #0f1419; --code-text: #d7dde5;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1216; --panel: #171b21; --text: #e8eaed; --muted: #9aa3ad; --line: #272d35;
+    --accent: #5b8ff0; --accent-text: #0b0d10; --ok: #4cc782; --ok-bg: #12301f; --warn: #e8b04a; --warn-bg: #33270e;
+    --bad: #f07b70; --bad-bg: #3a1815; --idle: #9aa3ad; --idle-bg: #232930; --code-bg: #0a0c0f; --code-text: #d7dde5;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 14px 24px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
+header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+header .meta { color: var(--muted); font-size: 12px; }
+header .spacer { flex: 1; }
+main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
+.banner { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+.stat .n { font-size: 22px; font-weight: 600; }
+.stat .l { color: var(--muted); font-size: 12px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; align-items: center; }
+.tab { border: 0; background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 7px; font: inherit; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--panel); color: var(--text); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 500; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.mono, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+td .sub { color: var(--muted); font-size: 12px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 500; }
+.badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.running { color: var(--ok); background: var(--ok-bg); }
+.exited { color: var(--idle); background: var(--idle-bg); }
+.failed { color: var(--bad); background: var(--bad-bg); }
+.created { color: var(--warn); background: var(--warn-bg); }
+.actions { display: flex; gap: 6px; justify-content: flex-end; }
+button.btn { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 7px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+button.btn:hover { border-color: var(--muted); }
+button.btn:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.danger { color: var(--bad); }
+a { color: var(--accent); }
+.empty { padding: 36px; text-align: center; color: var(--muted); }
+.empty code { background: var(--idle-bg); padding: 2px 6px; border-radius: 5px; }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0; width: min(560px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog.wide { width: min(980px, calc(100vw - 32px)); }
+.dlg-head { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); gap: 10px; }
+.dlg-head h2 { font-size: 15px; margin: 0; flex: 1; }
+.dlg-body { padding: 16px 18px; }
+.dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); }
+label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+input, textarea, select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); font: inherit; }
+textarea { min-height: 64px; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+pre.logs { margin: 0; background: var(--code-bg); color: var(--code-text); padding: 14px; height: 60vh; overflow: auto; font: 12.5px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; max-width: 90vw; z-index: 10; }
+.toast.err { background: var(--bad); color: #fff; }
+@media (max-width: 640px) { header, main { padding-left: 16px; padding-right: 16px; } .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 12h24l-3 12H7z" fill="var(--accent)"/><rect x="10" y="5" width="12" height="7" rx="1" fill="var(--accent)" opacity=".45"/></svg>hull</h1>
+  <span class="meta" id="meta"></span>
+  <span class="spacer"></span>
+  <button class="btn primary" id="runBtn">Run container</button>
+</header>
+<main>
+  <div class="banner" id="banner" hidden></div>
+  <section class="stats">
+    <div class="stat"><div class="n" id="sRunning">–</div><div class="l">Running</div></div>
+    <div class="stat"><div class="n" id="sStopped">–</div><div class="l">Stopped</div></div>
+    <div class="stat"><div class="n" id="sImages">–</div><div class="l">Images</div></div>
+    <div class="stat"><div class="n" id="sSize">–</div><div class="l">Image storage</div></div>
+  </section>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="containers">Containers</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="images">Images</button>
+    <span class="spacer" style="flex:1"></span>
+    <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--muted)"><input type="checkbox" id="showAll" style="width:auto" checked> Show stopped</label>
+  </div>
+  <div class="card" id="containers"></div>
+  <div class="card" id="images" hidden></div>
+</main>
+
+<dialog id="runDlg">
+  <form method="dialog" id="runForm">
+    <div class="dlg-head"><h2>Run a container</h2></div>
+    <div class="dlg-body">
+      <label for="fImage">Image</label>
+      <input id="fImage" list="imageList" required placeholder="my-app:latest or nginx:alpine">
+      <datalist id="imageList"></datalist>
+      <div class="row">
+        <div><label for="fName">Name (optional)</label><input id="fName" placeholder="my-app"></div>
+        <div><label for="fPorts">Ports</label><input id="fPorts" placeholder="8080"></div>
+      </div>
+      <div class="row">
+        <div><label for="fMem">Memory limit</label><input id="fMem" placeholder="256m"></div>
+        <div><label for="fCpus">CPU limit</label><input id="fCpus" type="number" step="0.1" min="0" placeholder="0.5"></div>
+      </div>
+      <label for="fEnv">Environment (KEY=value, one per line)</label>
+      <textarea id="fEnv"></textarea>
+      <label for="fCmd">Command override (optional)</label>
+      <input id="fCmd" placeholder="leave empty to use the image's command">
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn primary" id="runSubmit" value="run">Run</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logDlg" class="wide">
+  <div class="dlg-head"><h2 id="logTitle">Logs</h2>
+    <label style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="logFollow" style="width:auto" checked> Follow</label>
+    <button class="btn" id="logClose">Close</button></div>
+  <pre class="logs" id="logBody"></pre>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let state = { containers: [], images: [], info: {}, tab: "containers" };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "X-Hull": "1", "Content-Type": "application/json", ...(opts.headers || {}) } });
+  const text = await res.text();
+  if (!res.ok) { let m = text; try { m = JSON.parse(text).error; } catch {} throw new Error(m || res.statusText); }
+  try { return JSON.parse(text); } catch { return text; }
+}
+function toast(msg, err) {
+  const t = document.createElement("div"); t.className = "toast" + (err ? " err" : ""); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 2500);
+}
+function ago(iso) {
+  if (!iso || iso.startsWith("0001")) return "–";
+  const s = (Date.now() - new Date(iso)) / 1000;
+  if (s < 60) return Math.max(0, Math.floor(s)) + "s ago";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  if (s < 172800) return Math.floor(s / 3600) + "h ago";
+  return Math.floor(s / 86400) + "d ago";
+}
+function size(n) { const u = ["B","kB","MB","GB","TB"]; let i = 0; while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; } return (i ? n.toFixed(1) : n) + " " + u[i]; }
+function portLinks(ports) {
+  return (ports || []).map(p => { const c = String(p).split(":").pop().split("/")[0];
+    return `<a href="http://${location.hostname}:${esc(c)}" target="_blank" rel="noopener">${esc(c)}</a>`; }).join(", ") || "<span class='sub'>–</span>";
+}
+
+function renderContainers() {
+  const all = $("showAll").checked;
+  const list = state.containers.filter(c => all || c.status === "running");
+  if (!list.length) {
+    $("containers").innerHTML = `<div class="empty">${state.containers.length ? "No running containers." : "No containers yet. Click <b>Run container</b>, or run <code>hull run -d my-app</code>."}</div>`;
+    return;
+  }
+  const canRun = state.info.canRun;
+  $("containers").innerHTML = `<table><thead><tr><th>Name</th><th>Status</th><th>Image</th><th>Ports</th><th>Command</th><th></th></tr></thead><tbody>${
+    list.map(c => {
+      const failed = c.status === "exited" && c.exitCode !== 0;
+      const cls = c.status === "running" ? "running" : failed ? "failed" : c.status;
+      const label = c.status === "running" ? "Running" : c.status === "exited" ? `Exited (${c.exitCode})` : "Created";
+      const when = c.status === "running" ? "up since " + ago(c.startedAt).replace(" ago", "") : ago(c.finishedAt || c.createdAt);
+      const id = esc(c.id);
+      return `<tr>
+        <td><b>${esc(c.name)}</b><div class="sub mono">${esc(c.shortId)}</div></td>
+        <td><span class="badge ${cls}" title="${esc(c.error)}">${label}</span><div class="sub">${esc(when)}</div></td>
+        <td class="mono">${esc(c.imageShort)}</td>
+        <td>${c.status === "running" ? portLinks(c.ports) : "<span class='sub'>" + esc((c.ports || []).join(", ") || "–") + "</span>"}</td>
+        <td class="mono sub" title="${esc((c.command||[]).join(" "))}">${esc((c.command || []).join(" ").slice(0, 36))}</td>
+        <td><div class="actions">
+          <button class="btn" data-act="logs" data-id="${id}" data-name="${esc(c.name)}">Logs</button>
+          ${c.status === "running"
+            ? `<button class="btn" data-act="restart" data-id="${id}" ${canRun ? "" : "disabled"}>Restart</button><button class="btn" data-act="stop" data-id="${id}" ${canRun ? "" : "disabled"}>Stop</button>`
+            : `<button class="btn" data-act="start" data-id="${id}" ${canRun ? "" : "disabled"}>Start</button>`}
+          <button class="btn danger" data-act="remove" data-id="${id}" data-name="${esc(c.name)}" data-running="${c.status === "running"}" ${canRun ? "" : "disabled"}>Remove</button>
+        </div></td></tr>`;
+    }).join("")}</tbody></table>`;
+}
+
+function renderImages() {
+  if (!state.images.length) {
+    $("images").innerHTML = `<div class="empty">No images yet. Run <code>hull build</code> in a project, or <code>hull pull nginx:alpine</code>.</div>`;
+    return;
+  }
+  $("images").innerHTML = `<table><thead><tr><th>Image</th><th>Digest</th><th>Platform</th><th>Created</th><th>Size</th><th></th></tr></thead><tbody>${
+    state.images.map(i => `<tr>
+      <td class="mono"><b>${esc(i.ref)}</b></td>
+      <td class="mono sub">${esc(i.digest.replace("sha256:", "").slice(0, 12))}</td>
+      <td class="sub">${esc(i.os)}/${esc(i.arch)}</td>
+      <td class="sub">${esc(ago(i.created))}</td>
+      <td>${size(i.size)}</td>
+      <td><div class="actions">
+        <button class="btn" data-act="runimg" data-ref="${esc(i.ref)}" ${state.info.canRun ? "" : "disabled"}>Run</button>
+        <button class="btn danger" data-act="rmi" data-ref="${esc(i.ref)}">Remove</button>
+      </div></td></tr>`).join("")}</tbody></table>`;
+  $("imageList").innerHTML = state.images.map(i => `<option value="${esc(i.ref)}">`).join("");
+}
+
+function render() {
+  const running = state.containers.filter(c => c.status === "running").length;
+  $("sRunning").textContent = running;
+  $("sStopped").textContent = state.containers.length - running;
+  $("sImages").textContent = state.images.length;
+  $("sSize").textContent = size(state.images.reduce((a, i) => a + i.size, 0));
+  renderContainers(); renderImages();
+}
+
+async function refresh() {
+  try {
+    const [c, i] = await Promise.all([api("/api/containers"), api("/api/images")]);
+    state.containers = c; state.images = i; render();
+  } catch (e) { $("banner").hidden = false; $("banner").textContent = "Lost contact with hull: " + e.message; }
+}
+
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const { act, id, ref, name } = b.dataset;
+  try {
+    if (act === "logs") return openLogs(id, name);
+    if (act === "runimg") { $("runForm").reset(); $("fImage").value = ref; return $("runDlg").showModal(); }
+    if (act === "rmi") { if (!confirm(`Remove image ${ref}?`)) return; await api("/api/images/remove", { method: "POST", body: JSON.stringify({ ref }) }); toast("Image removed"); }
+    if (act === "remove") {
+      const running = b.dataset.running === "true";
+      if (!confirm(`Remove container ${name}?${running ? " It will be stopped first." : ""}`)) return;
+      b.disabled = true; await api(`/api/containers/${id}/remove${running ? "?force=1" : ""}`, { method: "POST" }); toast("Container removed");
+    }
+    if (["start", "stop", "restart"].includes(act)) {
+      b.disabled = true; b.textContent = act === "stop" ? "Stopping…" : "Starting…";
+      await api(`/api/containers/${id}/${act}`, { method: "POST" });
+    }
+  } catch (err) { toast(err.message, true); }
+  refresh();
+});
+
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+  $("containers").hidden = t.dataset.tab !== "containers"; $("images").hidden = t.dataset.tab !== "images";
+}));
+$("showAll").addEventListener("change", renderContainers);
+$("runBtn").addEventListener("click", () => { $("runForm").reset(); $("runDlg").showModal(); });
+$("runForm").addEventListener("submit", async (e) => {
+  if (e.submitter && e.submitter.value === "cancel") return;
+  e.preventDefault();
+  const body = {
+    image: $("fImage").value.trim(), name: $("fName").value.trim(),
+    ports: $("fPorts").value.split(/[,\s]+/).filter(Boolean),
+    env: $("fEnv").value.split("\n").map(s => s.trim()).filter(Boolean),
+    memory: $("fMem").value.trim(), cpus: parseFloat($("fCpus").value) || 0,
+  };
+  const cmd = $("fCmd").value.trim(); if (cmd) body.cmd = ["/bin/sh", "-c", cmd];
+  $("runSubmit").disabled = true; $("runSubmit").textContent = "Starting…";
+  try { const r = await api("/api/run", { method: "POST", body: JSON.stringify(body) }); $("runDlg").close(); toast(`Started ${r.name}`); refresh(); }
+  catch (err) { toast(err.message, true); }
+  finally { $("runSubmit").disabled = false; $("runSubmit").textContent = "Run"; }
+});
+
+let logTimer = null;
+async function loadLogs(id) {
+  try {
+    const text = await api(`/api/containers/${id}/logs?tail=1000`);
+    const el = $("logBody"); const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    el.textContent = text || "(no output yet)";
+    if (atBottom || $("logFollow").checked) el.scrollTop = el.scrollHeight;
+  } catch (e) { $("logBody").textContent = e.message; }
+}
+function openLogs(id, name) {
+  $("logTitle").textContent = "Logs: " + name; $("logBody").textContent = "Loading…";
+  $("logDlg").showModal(); loadLogs(id);
+  clearInterval(logTimer); logTimer = setInterval(() => $("logFollow").checked && loadLogs(id), 1500);
+}
+$("logClose").addEventListener("click", () => $("logDlg").close());
+$("logDlg").addEventListener("close", () => clearInterval(logTimer));
+
+(async () => {
+  try {
+    state.info = await api("/api/info");
+    $("meta").textContent = `${/^\d/.test(state.info.version) ? "v" : ""}${state.info.version} · ${state.info.os}/${state.info.arch}`;
+    if (!state.info.canRun) { $("banner").hidden = false; $("banner").textContent = state.info.runError; $("runBtn").disabled = true; }
+  } catch {}
+  refresh(); setInterval(refresh, 2000);
+})();
+</script>
+</body>
+</html>

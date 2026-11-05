@@ -1,0 +1,17 @@
+# A COPY-only image: works on macOS and Linux, no RUN steps, no root needed to build.
+name: static-site
+image: static-site
+tags: [latest]
+platform: linux/amd64
+
+stages:
+  - from: nginx:1.27-alpine
+    steps:
+      - copy: { src: nginx.conf, dest: /etc/nginx/conf.d/default.conf }
+      - copy: { src: dist, dest: /usr/share/nginx/html }
+      - expose: "8080"
+      - cmd: ["nginx", "-g", "daemon off;"]
+
+run:
+  ports: ["8080"]
+  memory: 128m
