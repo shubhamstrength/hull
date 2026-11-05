@@ -145,8 +145,14 @@ run:
 		if !exists(dir, "dist") && exists(dir, "build") {
 			out = "build"
 		}
-		if !exists(dir, out) && exists(dir, "index.html") {
+		// A plain site with no build step is served as is. A package.json means
+		// index.html is only the bundler's entry point, so keep pointing at the
+		// build output even before the first "npm run build".
+		if !hasPkg && !exists(dir, out) && exists(dir, "index.html") {
 			out = "."
+		}
+		if hasPkg && pkg.has("react-scripts") && !exists(dir, "dist") {
+			out = "build"
 		}
 		if err := writeNginxConf(dir); err != nil {
 			return "", "", err
